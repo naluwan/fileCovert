@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DatePicker } from '@/components/ui/date-picker'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 
@@ -14,32 +16,50 @@ interface ProductRow {
   shelfNo: string
 }
 
+// 格式化日期為 YYYY.MM.DD（用於借貨專用章）
+const formatToStampDate = (date: Date | undefined) => {
+  if (!date) return ''
+  return format(date, 'yyyy.MM.dd')
+}
+
+// 格式化日期為 M/D（用於預計訂還日期）
+const formatToShortDate = (date: Date | undefined) => {
+  if (!date) return ''
+  return format(date, 'M/d')
+}
+
+// 格式化日期為 MMDD（用於檔案名稱）
+const formatToFileDate = (date: Date | undefined) => {
+  if (!date) return ''
+  return format(date, 'MMdd')
+}
+
+// 生成預設商品列（項次自動填入）
+const generateDefaultProducts = (count: number): ProductRow[] => {
+  return Array.from({ length: count }, (_, i) => ({
+    itemNo: String(i + 1),
+    productCode: '',
+    productName: '',
+    spec: '',
+    multiple: '',
+    shelfNo: '',
+  }))
+}
+
 export default function LoanForm() {
   const [formData, setFormData] = useState({
     departmentName: '',
     contactPerson: '',
-    stampDate: new Date().toISOString().split('T')[0],
     storeNo: '',
     storeName: '',
     specialist: '',
-    returnDate: '',
     deliveryNote: '',
   })
 
-  const [products, setProducts] = useState<ProductRow[]>([
-    { itemNo: '', productCode: '', productName: '', spec: '', multiple: '', shelfNo: '' },
-    { itemNo: '', productCode: '', productName: '', spec: '', multiple: '', shelfNo: '' },
-    { itemNo: '', productCode: '', productName: '', spec: '', multiple: '', shelfNo: '' },
-    { itemNo: '', productCode: '', productName: '', spec: '', multiple: '', shelfNo: '' },
-    { itemNo: '', productCode: '', productName: '', spec: '', multiple: '', shelfNo: '' },
-    { itemNo: '', productCode: '', productName: '', spec: '', multiple: '', shelfNo: '' },
-    { itemNo: '', productCode: '', productName: '', spec: '', multiple: '', shelfNo: '' },
-    { itemNo: '', productCode: '', productName: '', spec: '', multiple: '', shelfNo: '' },
-    { itemNo: '', productCode: '', productName: '', spec: '', multiple: '', shelfNo: '' },
-    { itemNo: '', productCode: '', productName: '', spec: '', multiple: '', shelfNo: '' },
-    { itemNo: '', productCode: '', productName: '', spec: '', multiple: '', shelfNo: '' },
-    { itemNo: '', productCode: '', productName: '', spec: '', multiple: '', shelfNo: '' },
-  ])
+  const [stampDate, setStampDate] = useState<Date | undefined>(new Date())
+  const [returnDate, setReturnDate] = useState<Date | undefined>(new Date())
+
+  const [products, setProducts] = useState<ProductRow[]>(generateDefaultProducts(12))
 
   const [showPreview, setShowPreview] = useState(false)
 
@@ -55,14 +75,6 @@ export default function LoanForm() {
     })
   }
 
-  const formatStampDate = (dateStr: string) => {
-    if (!dateStr) return ''
-    const date = new Date(dateStr)
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}.${month}.${day}`
-  }
 
   const handleExportPDF = async () => {
     const element = document.getElementById('loan-form-preview')
@@ -93,7 +105,7 @@ export default function LoanForm() {
 
       pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio)
 
-      const dateStr = formatStampDate(formData.stampDate).replace(/\./g, '').slice(4)
+      const dateStr = formatToFileDate(stampDate)
       const fileName = `${formData.storeNo}${formData.storeName}借貨單 ${dateStr}.pdf`
       pdf.save(fileName)
     } catch (error) {
@@ -103,12 +115,26 @@ export default function LoanForm() {
   }
 
   const addRow = () => {
-    setProducts(prev => [...prev, { itemNo: '', productCode: '', productName: '', spec: '', multiple: '', shelfNo: '' }])
+    setProducts(prev => [...prev, {
+      itemNo: String(prev.length + 1),
+      productCode: '',
+      productName: '',
+      spec: '',
+      multiple: '',
+      shelfNo: ''
+    }])
   }
 
   const removeRow = (index: number) => {
     if (products.length > 1) {
-      setProducts(prev => prev.filter((_, i) => i !== index))
+      setProducts(prev => {
+        const filtered = prev.filter((_, i) => i !== index)
+        // 重新編號項次
+        return filtered.map((product, i) => ({
+          ...product,
+          itemNo: String(i + 1)
+        }))
+      })
     }
   }
 
@@ -142,14 +168,14 @@ export default function LoanForm() {
               />
             </div>
             <div>
-              <Label htmlFor="stampDate" className="text-sm">借貨專用章日期</Label>
-              <Input
-                id="stampDate"
-                type="date"
-                value={formData.stampDate}
-                onChange={(e) => handleInputChange('stampDate', e.target.value)}
-                className="mt-1"
-              />
+              <Label className="text-sm">借貨專用章日期</Label>
+              <div className="mt-1">
+                <DatePicker
+                  date={stampDate}
+                  onDateChange={setStampDate}
+                  placeholder="選擇日期"
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="storeNo" className="text-sm">店號</Label>
@@ -192,14 +218,14 @@ export default function LoanForm() {
               />
             </div>
             <div>
-              <Label htmlFor="returnDate" className="text-sm">預計訂還日期</Label>
-              <Input
-                id="returnDate"
-                value={formData.returnDate}
-                onChange={(e) => handleInputChange('returnDate', e.target.value)}
-                placeholder="例：1/24"
-                className="mt-1"
-              />
+              <Label className="text-sm">預計訂還日期</Label>
+              <div className="mt-1">
+                <DatePicker
+                  date={returnDate}
+                  onDateChange={setReturnDate}
+                  placeholder="選擇日期"
+                />
+              </div>
             </div>
           </div>
 
@@ -453,7 +479,7 @@ export default function LoanForm() {
                           lineHeight: '1.4',
                         }}
                       >
-                        {formatStampDate(formData.stampDate)}
+                        {formatToStampDate(stampDate)}
                       </span>
                       <span style={{ fontSize: '10px' }}>借貨專用章</span>
                     </div>
@@ -548,7 +574,7 @@ export default function LoanForm() {
                       display: 'inline-block',
                       textAlign: 'center',
                       lineHeight: '1.4'
-                    }}>預計訂還日期：{formData.returnDate || '\u00A0'}</span>
+                    }}>預計訂還日期：{formatToShortDate(returnDate) || '\u00A0'}</span>
                   </div>
                 </div>
               </div>
