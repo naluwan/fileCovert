@@ -54,12 +54,13 @@ export default function LoanForm() {
     storeName: '',
     specialist: '',
     deliveryNote: '',
+    division: '',
   })
 
   const [stampDate, setStampDate] = useState<Date | undefined>(new Date())
   const [returnDate, setReturnDate] = useState<Date | undefined>(new Date())
 
-  const [products, setProducts] = useState<ProductRow[]>(generateDefaultProducts(12))
+  const [products, setProducts] = useState<ProductRow[]>(generateDefaultProducts(1))
 
   const [showPreview, setShowPreview] = useState(false)
 
@@ -194,6 +195,16 @@ export default function LoanForm() {
                 value={formData.storeName}
                 onChange={(e) => handleInputChange('storeName', e.target.value)}
                 placeholder="例：台中錦華店"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="division" className="text-sm">區分</Label>
+              <Input
+                id="division"
+                value={formData.division}
+                onChange={(e) => handleInputChange('division', e.target.value)}
+                placeholder="例：北區"
                 className="mt-1"
               />
             </div>
@@ -512,22 +523,26 @@ export default function LoanForm() {
                     backgroundColor: '#90EE90',
                     padding: '4px 40px',
                     display: 'inline-block',
-                    lineHeight: '1.4'
-                  }}></span>
+                    lineHeight: '1.4',
+                    minWidth: '60px',
+                    textAlign: 'center'
+                  }}>{formData.division || '\u00A0'}</span>
                 </div>
 
                 {/* Delivery Note */}
-                <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                  <span style={{
-                    backgroundColor: '#87CEEB',
-                    padding: '4px 15px',
-                    fontSize: '13px',
-                    display: 'inline-block',
-                    textAlign: 'center',
-                    lineHeight: '1.4'
-                  }}>
-                    {formData.deliveryNote || '\u00A0'}
-                  </span>
+                <div style={{ textAlign: 'center', marginBottom: '8px', minHeight: '24px' }}>
+                  {formData.deliveryNote && (
+                    <span style={{
+                      backgroundColor: '#87CEEB',
+                      padding: '4px 15px',
+                      fontSize: '13px',
+                      display: 'inline-block',
+                      textAlign: 'center',
+                      lineHeight: '1.4'
+                    }}>
+                      {formData.deliveryNote}
+                    </span>
+                  )}
                 </div>
 
                 {/* Product Table */}
